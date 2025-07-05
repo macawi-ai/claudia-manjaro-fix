@@ -1,0 +1,18 @@
+#!/bin/bash
+# Pre-commit hook for claudia-manjaro-fix
+# To install: cp pre-commit-hook .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+echo "🔍 Running pre-commit validation..."
+
+# Run the development check script
+if ! ./dev-check.sh; then
+    echo ""
+    echo "❌ Pre-commit validation failed!"
+    echo "💡 Fix the issues above before committing"
+    echo "💡 Or run: git commit --no-verify (to skip validation)"
+    exit 1
+fi
+
+echo ""
+echo "✅ Pre-commit validation passed!"
+exit 0
