@@ -26,12 +26,12 @@
 
   Automated Installation
 
-  curl -fsSL https://raw.githubusercontent.com/[YOUR-USERNAME]/claudia-manjaro-fix/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/macawi-ai/claudia-manjaro-fix/main/install.sh | bash
 
   Manual Installation
 
   1. Clone this repository:
-  git clone https://github.com/[YOUR-USERNAME]/claudia-manjaro-fix.git
+  git clone https://github.com/macawi-ai/claudia-manjaro-fix.git
   cd claudia-manjaro-fix
 
   2. Run the installation script:
