@@ -71,29 +71,37 @@ Missing AppImage dependencies, incompatible linuxdeploy version, or FUSE executi
 - Claudia window opens but displays only white/blank content
 - No UI elements visible
 - Application seems to be running but not functional
+- Black screen on production builds
 
 **Cause:**
 WebKit compositing mode conflicts with newer WebKit versions.
 
 **Solutions:**
 
-1. **Ensure you're using the launcher script:**
+1. **For development - use the launcher script:**
    ```bash
    ./claudia-manjaro.sh dev
    # NOT: bun run tauri dev
    ```
 
-2. **Verify environment variables are set:**
+2. **For production builds - use the production launcher:**
+   ```bash
+   # After building with build-exe or build-full
+   ./launch-production.sh
+   # NOT: ./src-tauri/target/release/claudia
+   ```
+
+3. **Verify environment variables are set:**
    ```bash
    echo $WEBKIT_DISABLE_COMPOSITING_MODE  # Should output: 1
    ```
 
-3. **Check WebKit version:**
+4. **Check WebKit version:**
    ```bash
    pacman -Q webkit2gtk-4.1
    ```
 
-4. **Manual environment setup (if needed):**
+5. **Manual environment setup (if needed):**
    ```bash
    export WEBKIT_DISABLE_COMPOSITING_MODE=1
    export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1

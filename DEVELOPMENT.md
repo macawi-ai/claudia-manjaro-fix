@@ -135,7 +135,21 @@ claudia-manjaro-fix/
 - Test on clean Manjaro installation
 - Test with existing Claudia installations
 - Test all build options (dev, build, build-exe, build-full)
+- Test production launcher script (launch-production.sh)
 - Test error conditions and edge cases
+
+### Testing Production Builds
+After building with `build-exe` or `build-full`:
+```bash
+# Test the production launcher
+./launch-production.sh
+
+# Verify it sets WebKit environment variables
+# The launcher should display the variables being set
+
+# DO NOT test by running the executable directly as it will show black screen:
+# ./src-tauri/target/release/claudia  # Will fail!
+```
 
 ### Validation Testing
 ```bash
