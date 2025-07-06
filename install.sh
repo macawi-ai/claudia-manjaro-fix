@@ -209,12 +209,19 @@
   if ! command -v bun &> /dev/null; then
       echo "📦 Installing Bun JavaScript runtime..."
       curl -fsSL https://bun.sh/install | bash
-      # Source the bun environment
-      if [ -f "$HOME/.bashrc" ]; then
-          source "$HOME/.bashrc" 2>/dev/null || true
+      
+      # Add bun to PATH for this session
+      export BUN_INSTALL="$HOME/.bun"
+      export PATH="$BUN_INSTALL/bin:$PATH"
+      
+      # Verify bun is now available
+      if command -v bun &> /dev/null; then
+          echo "✅ Bun installed successfully: $(bun --version)"
+      else
+          echo "⚠️  Bun installation completed but binary not found in PATH"
+          echo "💡 You may need to restart your terminal or run: source ~/.bashrc"
+          echo "💡 Continuing with npm as fallback..."
       fi
-      export PATH="$HOME/.bun/bin:$PATH"
-      echo "✅ Bun installed successfully"
   else
       echo "✅ Bun already installed: $(bun --version)"
   fi
@@ -425,17 +432,34 @@ WRAPPER_EOF
 
   # Install dependencies
   echo "📦 Installing Claudia dependencies..."
-  if bun install; then
-      echo "✅ Dependencies installed successfully"
-  else
-      echo "❌ Failed to install dependencies. Trying npm as fallback..."
-      if command -v npm &> /dev/null; then
-          npm install
-          echo "✅ Dependencies installed with npm"
+  
+  # Check which package manager to use
+  if command -v bun &> /dev/null; then
+      echo "🔧 Using Bun to install dependencies..."
+      if bun install; then
+          echo "✅ Dependencies installed successfully with Bun"
       else
-          echo "❌ Both bun and npm failed. Please install dependencies manually."
+          echo "⚠️  Bun install failed, trying npm as fallback..."
+          if command -v npm &> /dev/null; then
+              npm install
+              echo "✅ Dependencies installed with npm"
+          else
+              echo "❌ Both bun and npm failed. Please install dependencies manually."
+              exit 1
+          fi
+      fi
+  elif command -v npm &> /dev/null; then
+      echo "🔧 Bun not available, using npm to install dependencies..."
+      if npm install; then
+          echo "✅ Dependencies installed successfully with npm"
+      else
+          echo "❌ npm install failed. Please install dependencies manually."
           exit 1
       fi
+  else
+      echo "❌ No JavaScript package manager found (neither bun nor npm)."
+      echo "💡 Please install either bun or npm and try again."
+      exit 1
   fi
 
   # Create WebKit-compatible launch script
@@ -524,14 +548,27 @@ WRAPPER_EOF
   echo "📍 Working directory: $(pwd)"
   echo ""
 
+  # Detect available package manager
+  if command -v bun &> /dev/null; then
+      PKG_MANAGER="bun"
+      echo "📦 Using Bun package manager"
+  elif command -v npm &> /dev/null; then
+      PKG_MANAGER="npm"
+      echo "📦 Using npm package manager"
+  else
+      echo "❌ No JavaScript package manager found (neither bun nor npm)"
+      echo "💡 Please install bun or npm first"
+      exit 1
+  fi
+
   case "$1" in
       "dev"|"development"|"")
           echo "🔧 Starting development server..."
-          bun run tauri dev
+          $PKG_MANAGER run tauri dev
           ;;
       "build"|"production")
           echo "🏗  Building production version (deb, rpm)..."
-          bun run tauri build
+          $PKG_MANAGER run tauri build
           echo ""
           echo "✅ Build complete! Package files are in: ./src-tauri/target/release/bundle/"
           echo ""
@@ -545,7 +582,7 @@ WRAPPER_EOF
           ;;
       "build-exe"|"executable")
           echo "🏗  Building executable only..."
-          bun run tauri build --no-bundle
+          $PKG_MANAGER run tauri build --no-bundle
           echo ""
           echo "✅ Build complete! The executable is at: ./src-tauri/target/release/claudia"
           echo ""
@@ -593,10 +630,10 @@ WRAPPER_EOF
           
           if [ -f "src-tauri/tauri.conf.appimage.json" ]; then
               echo "🚀 Starting AppImage build with configuration..."
-              bun run tauri build --config src-tauri/tauri.conf.appimage.json
+              $PKG_MANAGER run tauri build --config src-tauri/tauri.conf.appimage.json
           else
               echo "🚀 Starting AppImage build with default configuration..."
-              bun run tauri build
+              $PKG_MANAGER run tauri build
           fi
           echo ""
           echo "✅ Build complete! Output files are in: ./src-tauri/target/release/"
