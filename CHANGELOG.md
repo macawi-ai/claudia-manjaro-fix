@@ -5,6 +5,22 @@ All notable changes to the Claudia WebKit Fix for Manjaro Linux will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Production Build Launcher Script**
+  - New `launch-production.sh` script for running production executables
+  - Automatically sets WebKit environment variables for production builds
+  - Prevents black screen issues on `build-exe` and `build-full` outputs
+  - Auto-detects executable location with fallback options
+  - Clear usage instructions displayed after build completion
+
+### Changed
+- **Build Command Output**
+  - All build commands now display clear instructions to use `launch-production.sh`
+  - Added warnings against running executables directly
+  - Enhanced build completion messages with specific paths
+
 ## [1.1.0] - 2025-01-05
 
 ### Added

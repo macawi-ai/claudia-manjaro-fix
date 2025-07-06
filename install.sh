@@ -532,10 +532,27 @@ WRAPPER_EOF
       "build"|"production")
           echo "🏗  Building production version (deb, rpm)..."
           bun run tauri build
+          echo ""
+          echo "✅ Build complete! Package files are in: ./src-tauri/target/release/bundle/"
+          echo ""
+          echo "📦 To install the .deb package:"
+          echo "   sudo dpkg -i ./src-tauri/target/release/bundle/deb/*.deb"
+          echo ""
+          echo "🚀 To run the executable directly, use:"
+          echo "   ./launch-production.sh"
+          echo ""
+          echo "⚠️  DO NOT run the executable directly - it needs WebKit environment variables!"
           ;;
       "build-exe"|"executable")
           echo "🏗  Building executable only..."
           bun run tauri build --no-bundle
+          echo ""
+          echo "✅ Build complete! The executable is at: ./src-tauri/target/release/claudia"
+          echo ""
+          echo "🚀 To run the production build, use:"
+          echo "   ./launch-production.sh"
+          echo ""
+          echo "⚠️  DO NOT run the executable directly - it needs WebKit environment variables!"
           ;;
       "build-full"|"bundle"|"appimage")
           echo "🏗  Building with AppImage (requires fuse2, appstream-glib)..."
@@ -581,6 +598,14 @@ WRAPPER_EOF
               echo "🚀 Starting AppImage build with default configuration..."
               bun run tauri build
           fi
+          echo ""
+          echo "✅ Build complete! Output files are in: ./src-tauri/target/release/"
+          echo ""
+          echo "🚀 To run the production executable, use:"
+          echo "   ./launch-production.sh"
+          echo ""
+          echo "📦 AppImage files (if built) are in: ./src-tauri/target/release/bundle/appimage/"
+          echo "⚠️  DO NOT run the executable directly - it needs WebKit environment variables!"
           ;;
       "clean")
           echo "🧹 Cleaning build artifacts..."
@@ -648,6 +673,59 @@ LAUNCHER_EOF
           exit 1
       fi
   fi
+
+  # Create production launcher script
+  echo "🔧 Creating production launcher script..."
+  cat > launch-production.sh << 'PROD_LAUNCHER_EOF'
+#!/bin/bash
+
+# Claudia Production Launcher Script
+# This script sets the required WebKit environment variables to prevent black screen issues
+
+# Critical WebKit fixes for Manjaro/Arch Linux
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+export APPIMAGE_EXTRACT_AND_RUN=1
+
+# AppImage build compatibility
+export NO_STRIP=1
+
+# Find the executable path - check multiple possible locations
+if [ -f "./src-tauri/target/release/claudia" ]; then
+    CLAUDIA_EXEC="./src-tauri/target/release/claudia"
+elif [ -f "./claudia" ]; then
+    CLAUDIA_EXEC="./claudia"
+elif [ -f "../claudia" ]; then
+    CLAUDIA_EXEC="../claudia"
+else
+    # Allow specifying path as first argument
+    if [ -n "$1" ] && [ -f "$1" ]; then
+        CLAUDIA_EXEC="$1"
+        shift  # Remove the path from arguments
+    else
+        echo "Error: Could not find Claudia executable"
+        echo "Usage: $0 [path-to-claudia-executable] [claudia-args...]"
+        echo ""
+        echo "The executable is typically at: ./src-tauri/target/release/claudia"
+        echo "after running 'build-exe' or 'build-full'"
+        exit 1
+    fi
+fi
+
+echo "Launching Claudia from: $CLAUDIA_EXEC"
+echo "WebKit environment variables set:"
+echo "  WEBKIT_DISABLE_COMPOSITING_MODE=1"
+echo "  WEBKIT_DISABLE_DMABUF_RENDERER=1"
+echo "  WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1"
+
+# Launch Claudia with all fixes applied
+exec "$CLAUDIA_EXEC" "$@"
+PROD_LAUNCHER_EOF
+
+  chmod +x launch-production.sh
+  echo "✅ Production launcher created: launch-production.sh"
   
   # Create AppImage configuration for build-full option
   echo "🔧 Creating AppImage configuration..."

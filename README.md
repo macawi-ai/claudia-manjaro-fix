@@ -140,6 +140,16 @@ cd /path/to/claudia
 ./claudia-manjaro.sh build-full   # Includes AppImage
 ```
 
+### Running Production Builds
+```bash
+# After building with build-exe or build-full, launch with:
+cd /path/to/claudia
+./launch-production.sh
+
+# The script automatically finds the executable and sets WebKit environment variables
+# This prevents the black screen issue on production builds
+```
+
 ### Cleaning
 ```bash
 # Clean build artifacts
@@ -192,6 +202,7 @@ After installation, you'll have:
 ```
 claudia/
 ├── claudia-manjaro.sh              # Main launcher script
+├── launch-production.sh            # Production executable launcher
 ├── uninstall-claudia-manjaro.sh    # Uninstaller
 ├── src-tauri/                      # Tauri backend
 ├── src/                            # React frontend

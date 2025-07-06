@@ -79,6 +79,7 @@ When prompted for repository source, you can choose:
 
 ### Files Created
 - `claudia-manjaro.sh` - Main launcher script
+- `launch-production.sh` - Production executable launcher
 - `uninstall-claudia-manjaro.sh` - Uninstaller
 - `~/.local/share/applications/claudia.desktop` - Desktop entry
 - Shell aliases in `~/.bashrc` or `~/.zshrc`
