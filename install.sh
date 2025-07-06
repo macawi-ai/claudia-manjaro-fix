@@ -205,69 +205,265 @@
       echo "⚠  WebKit not found, will install required packages"
   fi
 
-  # Check if bun is installed
-  if ! command -v bun &> /dev/null; then
-      echo "📦 Installing Bun JavaScript runtime..."
-      curl -fsSL https://bun.sh/install | bash
+  # Cybernetic Environment Validation Governor
+  # Follows probe-sense-respond pattern for complex environment dependencies
+  environment_validation_governor() {
+      echo "🔍 Environment Validation Governor: Analyzing system capabilities..."
       
-      # Add bun to PATH for this session
-      export BUN_INSTALL="$HOME/.bun"
-      export PATH="$BUN_INSTALL/bin:$PATH"
+      local validation_failures=0
+      local critical_failures=()
+      local warnings=()
       
-      # Verify bun is now available
-      if command -v bun &> /dev/null; then
-          echo "✅ Bun installed successfully: $(bun --version)"
+      # Critical Dependency: Bun Runtime (Essential for Claudia)
+      echo "🎯 Validating critical dependency: Bun JavaScript runtime"
+      if ! command -v bun &> /dev/null; then
+          echo "📦 Installing Bun JavaScript runtime (ESSENTIAL for Claudia)..."
+          
+          # Attempt automatic installation
+          if curl -fsSL https://bun.sh/install | bash; then
+              # Add bun to PATH for this session
+              export BUN_INSTALL="$HOME/.bun"
+              export PATH="$BUN_INSTALL/bin:$PATH"
+              
+              # Validate installation success
+              if command -v bun &> /dev/null; then
+                  local bun_version=$(bun --version)
+                  echo "✅ Bun installed successfully: $bun_version"
+                  
+                  # Test Bun functionality (basic compile test)
+                  if echo 'console.log("test")' | bun run - >/dev/null 2>&1; then
+                      echo "✅ Bun runtime validation passed"
+                  else
+                      echo "⚠️  Bun installed but runtime test failed"
+                      warnings+=("Bun runtime test failed - may have functional issues")
+                  fi
+              else
+                  echo "❌ CRITICAL: Bun installation failed - binary not accessible"
+                  critical_failures+=("Bun installation failed - Claudia cannot function without Bun")
+                  validation_failures=$((validation_failures + 1))
+              fi
+          else
+              echo "❌ CRITICAL: Failed to download/install Bun"
+              critical_failures+=("Bun download failed - check internet connection")
+              validation_failures=$((validation_failures + 1))
+          fi
       else
-          echo "⚠️  Bun installation completed but binary not found in PATH"
-          echo "💡 You may need to restart your terminal or run: source ~/.bashrc"
-          echo "💡 Continuing with npm as fallback..."
+          local bun_version=$(bun --version)
+          echo "✅ Bun already installed: $bun_version"
+          
+          # Validate existing Bun installation
+          if echo 'console.log("test")' | bun run - >/dev/null 2>&1; then
+              echo "✅ Existing Bun runtime validation passed"
+          else
+              echo "⚠️  Existing Bun installation may be corrupted"
+              warnings+=("Existing Bun runtime test failed - consider reinstalling")
+          fi
       fi
-  else
-      echo "✅ Bun already installed: $(bun --version)"
+      
+      # Environment Path Validation
+      echo "🔍 Validating environment path configuration..."
+      if [[ ":$PATH:" != *":$HOME/.bun/bin:"* ]] && command -v bun &> /dev/null; then
+          echo "⚠️  Bun accessible but not in standard PATH"
+          warnings+=("Bun PATH configuration may need manual adjustment")
+      fi
+      
+      return $validation_failures
+  }
+
+  # Execute Environment Validation Governor
+  if ! environment_validation_governor; then
+      echo ""
+      echo "❌ CRITICAL ENVIRONMENT VALIDATION FAILURES DETECTED"
+      echo "=================================================="
+      echo ""
+      echo "🚨 The following critical issues prevent Claudia installation:"
+      for failure in "${critical_failures[@]}"; do
+          echo "   • $failure"
+      done
+      echo ""
+      echo "💡 IMPORTANT: Claudia requires Bun (not npm) for core functionality:"
+      echo "   • Bun's --compile flag for creating standalone executables"
+      echo "   • Bun's native file embedding for WebAssembly and binary assets"
+      echo "   • Bun-specific APIs for cross-platform compilation"
+      echo ""
+      echo "🔄 Remediation Steps:"
+      echo "   1. Ensure stable internet connection"
+      echo "   2. Re-run this script: ./install.sh"
+      echo "   3. If issues persist, manually install Bun:"
+      echo "      curl -fsSL https://bun.sh/install | bash"
+      echo "      source ~/.bashrc"
+      echo ""
+      exit 1
   fi
 
-  # Check for required system packages
-  echo "🔍 Checking system dependencies..."
-  REQUIRED_PACKAGES=("webkit2gtk-4.1" "gtk3" "libayatana-appindicator" "rust" "nodejs" "npm")
-  OPTIONAL_PACKAGES=("fuse2" "libfuse2" "appstream-glib")
-  MISSING_PACKAGES=()
-  MISSING_OPTIONAL=()
-
-  for package in "${REQUIRED_PACKAGES[@]}"; do
-      if ! pacman -Q "$package" &> /dev/null; then
-          MISSING_PACKAGES+=("$package")
-      else
-          echo "✅ $package is already installed"
-      fi
-  done
-
-  if [ ${#MISSING_PACKAGES[@]} -ne 0 ]; then
-      echo "📦 Installing missing packages: ${MISSING_PACKAGES[*]}"
-      if sudo pacman -S --needed "${MISSING_PACKAGES[@]}"; then
-          echo "✅ System dependencies installed"
-      else
-          echo "❌ Failed to install some packages. Please check manually."
-          echo "💡 Try: sudo pacman -S --needed ${MISSING_PACKAGES[*]}"
-      fi
-  else
-      echo "✅ All required packages are already installed"
+  # Report warnings if any
+  if [ ${#warnings[@]} -gt 0 ]; then
+      echo ""
+      echo "⚠️  Environment Warnings (non-critical):"
+      for warning in "${warnings[@]}"; do
+          echo "   • $warning"
+      done
+      echo ""
   fi
+
+  # System Dependency Validation Governor
+  echo "🔍 System Dependency Validation Governor: Analyzing package ecosystem..."
   
-  # Check optional packages for AppImage bundling
-  echo "🔍 Checking optional packages for AppImage bundling..."
-  for package in "${OPTIONAL_PACKAGES[@]}"; do
-      if ! pacman -Q "$package" &> /dev/null; then
-          MISSING_OPTIONAL+=("$package")
-      else
-          echo "✅ $package is installed"
-      fi
-  done
+  # Core system dependencies for Claudia + Tauri + WebKit
+  REQUIRED_PACKAGES=("webkit2gtk-4.1" "gtk3" "libayatana-appindicator" "rust" "nodejs")
   
-  if [ ${#MISSING_OPTIONAL[@]} -ne 0 ]; then
-      echo "⚠  Optional packages missing for AppImage bundling: ${MISSING_OPTIONAL[*]}"
-      echo "💡 Install with: sudo pacman -S --needed ${MISSING_OPTIONAL[*]}"
-      echo "💡 Or use 'claudia-build' instead of 'claudia-build-full' to skip AppImage creation"
-  fi
+  # AppImage ecosystem dependencies (validated package names)
+  APPIMAGE_PACKAGES=("fuse2" "appstream-glib")
+  
+  # Build toolchain dependencies
+  BUILD_PACKAGES=("gcc" "pkgconf" "openssl" "base-devel")
+  # System Package Validation with Cybernetic Learning Governor
+  system_package_governor() {
+      local package_category="$1"
+      local package_array=("${@:2}")
+      local missing_packages=()
+      local failed_packages=()
+      local validation_failures=0
+      
+      echo "🎯 Validating $package_category packages..."
+      
+      # Probe: Check which packages are missing
+      for package in "${package_array[@]}"; do
+          if ! pacman -Q "$package" &> /dev/null; then
+              missing_packages+=("$package")
+              echo "❌ Missing: $package"
+          else
+              echo "✅ Found: $package ($(pacman -Q "$package" | awk '{print $2}'))"
+          fi
+      done
+      
+      # Sense: Analyze missing packages and attempt intelligent installation
+      if [ ${#missing_packages[@]} -ne 0 ]; then
+          echo "📦 Installing missing $package_category packages: ${missing_packages[*]}"
+          
+          # Cybernetic Learning: Try individual package installation to isolate failures
+          for package in "${missing_packages[@]}"; do
+              echo "🔧 Installing $package..."
+              if sudo pacman -S --needed "$package" 2>/dev/null; then
+                  echo "✅ Successfully installed: $package"
+              else
+                  echo "❌ Failed to install: $package"
+                  failed_packages+=("$package")
+                  
+                  # Learning mechanism: Try to understand why it failed
+                  if ! pacman -Ss "^$package$" &>/dev/null; then
+                      echo "💡 Package '$package' not found in repositories"
+                      echo "🔍 Searching for alternatives..."
+                      pacman -Ss "$package" | head -3 | while read line; do
+                          if [[ "$line" =~ ^[a-zA-Z] ]]; then
+                              echo "   Suggestion: $line"
+                          fi
+                      done
+                  fi
+              fi
+          done
+          
+          # Respond: Analyze results and provide guidance
+          if [ ${#failed_packages[@]} -eq 0 ]; then
+              echo "✅ All $package_category packages installed successfully"
+          else
+              echo "⚠️  Some $package_category packages failed to install: ${failed_packages[*]}"
+              validation_failures=1
+              
+              # Antifragile pattern: Provide specific guidance for each failure
+              echo "🔄 Cybernetic Learning - Package Installation Failures:"
+              for failed_pkg in "${failed_packages[@]}"; do
+                  echo "   • $failed_pkg: Check if package name is correct or if alternatives exist"
+              done
+          fi
+          
+          # Final validation loop: Verify what actually got installed
+          local still_missing=()
+          for package in "${missing_packages[@]}"; do
+              if ! pacman -Q "$package" &> /dev/null; then
+                  still_missing+=("$package")
+              fi
+          done
+          
+          if [ ${#still_missing[@]} -gt 0 ]; then
+              echo "📊 Final validation - packages still missing: ${still_missing[*]}"
+          fi
+      else
+          echo "✅ All $package_category packages already installed"
+      fi
+      
+      return $validation_failures
+  }
+
+  # Execute governors for different package categories
+  echo "🔍 Core System Dependencies:"
+  system_package_governor "core system" "${REQUIRED_PACKAGES[@]}"
+  
+  echo ""
+  echo "🔍 Build Toolchain Dependencies:"
+  system_package_governor "build toolchain" "${BUILD_PACKAGES[@]}"
+  
+  echo ""
+  echo "🔍 AppImage Ecosystem Dependencies (Optional):"
+  appimage_capability_governor() {
+      echo "🎯 Analyzing AppImage bundling capabilities..."
+      
+      # Check individual capabilities rather than just package presence
+      local capabilities_missing=()
+      local fuse_available=false
+      local appstream_available=false
+      
+      # FUSE capability check (multiple ways to satisfy this)
+      if pacman -Q fuse2 &>/dev/null || pacman -Q fuse3 &>/dev/null; then
+          echo "✅ FUSE capability: Available"
+          fuse_available=true
+      else
+          echo "❌ FUSE capability: Missing"
+          capabilities_missing+=("FUSE support for AppImage mounting")
+      fi
+      
+      # AppStream capability check
+      if pacman -Q appstream-glib &>/dev/null || pacman -Q appstream &>/dev/null; then
+          echo "✅ AppStream capability: Available"
+          appstream_available=true
+      else
+          echo "⚠️  AppStream capability: Missing (attempting installation...)"
+          if sudo pacman -S --needed appstream-glib 2>/dev/null; then
+              echo "✅ AppStream capability: Installed successfully"
+              appstream_available=true
+          else
+              echo "❌ AppStream capability: Installation failed"
+              capabilities_missing+=("AppStream metadata support")
+          fi
+      fi
+      
+      # Cybernetic decision making based on capabilities
+      if [ ${#capabilities_missing[@]} -eq 0 ]; then
+          echo "✅ AppImage bundling fully supported - all capabilities available"
+          return 0
+      else
+          echo "⚠️  AppImage bundling capabilities analysis:"
+          for capability in "${capabilities_missing[@]}"; do
+              echo "   • Missing: $capability"
+          done
+          echo ""
+          echo "🎯 Impact assessment:"
+          if [ "$fuse_available" = false ]; then
+              echo "   • FUSE missing: AppImages will use extract-and-run mode (slower but functional)"
+          fi
+          if [ "$appstream_available" = false ]; then
+              echo "   • AppStream missing: Metadata generation may be limited"
+          fi
+          echo ""
+          echo "💡 Recommended actions:"
+          echo "   • For development: Use 'claudia-build' (creates deb/rpm packages)"
+          echo "   • For AppImage: Use 'claudia-build-full' (will work with extract-and-run)"
+          echo "   • Manual fix: sudo pacman -S --needed fuse2 appstream-glib"
+          return 1
+      fi
+  }
+  
+  appimage_capability_governor
   
   # Check for FUSE kernel module (required for AppImage execution)
   if ! lsmod | grep -q fuse && ! modinfo fuse &> /dev/null; then
@@ -430,40 +626,53 @@ WRAPPER_EOF
 
   cd "$CLAUDIA_DIR"
 
-  # Install dependencies
-  echo "📦 Installing Claudia dependencies..."
+  # Install Claudia dependencies with Bun
+  echo "📦 Installing Claudia dependencies with Bun..."
   
-  # Check which package manager to use
-  if command -v bun &> /dev/null; then
-      echo "🔧 Using Bun to install dependencies..."
-      if bun install; then
-          echo "✅ Dependencies installed successfully with Bun"
+  # Bun validation should have already passed, but double-check
+  if ! command -v bun &> /dev/null; then
+      echo "❌ CRITICAL: Bun not found - dependency installation cannot proceed"
+      echo "💡 This indicates environment validation governor failure"
+      exit 1
+  fi
+  
+  echo "🔧 Installing dependencies with Bun (required for Claudia)..."
+  if bun install; then
+      echo "✅ Dependencies installed successfully with Bun"
+      
+      # Validate installation by checking for key dependency files
+      if [ -f "node_modules/.bin/tauri" ] || [ -d "node_modules/@tauri-apps" ]; then
+          echo "✅ Tauri dependencies validated"
       else
-          echo "⚠️  Bun install failed, trying npm as fallback..."
-          if command -v npm &> /dev/null; then
-              npm install
-              echo "✅ Dependencies installed with npm"
-          else
-              echo "❌ Both bun and npm failed. Please install dependencies manually."
-              exit 1
-          fi
-      fi
-  elif command -v npm &> /dev/null; then
-      echo "🔧 Bun not available, using npm to install dependencies..."
-      if npm install; then
-          echo "✅ Dependencies installed successfully with npm"
-      else
-          echo "❌ npm install failed. Please install dependencies manually."
-          exit 1
+          echo "⚠️  Dependency installation may be incomplete - missing Tauri"
       fi
   else
-      echo "❌ No JavaScript package manager found (neither bun nor npm)."
-      echo "💡 Please install either bun or npm and try again."
+      echo "❌ CRITICAL: Bun dependency installation failed"
+      echo "💡 This may indicate:"
+      echo "   • Network connectivity issues"
+      echo "   • Disk space problems"
+      echo "   • Incompatible package.json configuration"
+      echo "   • Missing system dependencies for native modules"
+      echo ""
+      echo "🔄 Remediation steps:"
+      echo "   1. Check internet connection"
+      echo "   2. Ensure sufficient disk space"
+      echo "   3. Try manual installation: cd $CLAUDIA_DIR && bun install"
       exit 1
   fi
 
   # Create WebKit-compatible launch script
   echo "🔧 Creating WebKit-compatible launch script..."
+  
+  # Bun is essential for Claudia - no fallback to npm
+  if ! command -v bun &> /dev/null; then
+      echo "❌ CRITICAL: Bun not found after installation!"
+      echo "💡 This should not happen - environment validation governor failed"
+      exit 1
+  fi
+  
+  echo "🎯 Launcher configured for Bun (essential for Claudia)"
+  
   cat > claudia-manjaro.sh << 'LAUNCHER_EOF'
   #!/bin/bash
 
@@ -548,27 +757,78 @@ WRAPPER_EOF
   echo "📍 Working directory: $(pwd)"
   echo ""
 
-  # Detect available package manager
-  if command -v bun &> /dev/null; then
-      PKG_MANAGER="bun"
-      echo "📦 Using Bun package manager"
-  elif command -v npm &> /dev/null; then
-      PKG_MANAGER="npm"
-      echo "📦 Using npm package manager"
-  else
-      echo "❌ No JavaScript package manager found (neither bun nor npm)"
-      echo "💡 Please install bun or npm first"
+  echo "📦 Using Bun package manager (required for Claudia)"
+  
+  # Runtime Environment Validation Governor
+  runtime_environment_governor() {
+      local validation_failures=0
+      local warnings=()
+      
+      echo "🔍 Runtime Environment Governor: Validating execution context..."
+      
+      # Critical: Bun availability and functionality
+      if ! command -v bun &> /dev/null; then
+          echo "❌ CRITICAL: Bun not found in runtime environment!"
+          echo "💡 PATH configuration: $PATH"
+          echo "💡 Try: export PATH=\"$HOME/.bun/bin:$PATH\""
+          echo "💡 Or restart your terminal and try again"
+          return 1
+      fi
+      
+      # Test Bun functionality
+      if ! echo 'console.log("runtime-test")' | bun run - >/dev/null 2>&1; then
+          echo "⚠️  Bun runtime test failed - may have issues"
+          warnings+=("Bun runtime test failed")
+      else
+          echo "✅ Bun runtime validation passed"
+      fi
+      
+      # Project context validation
+      if [ ! -f "src-tauri/Cargo.toml" ]; then
+          echo "❌ Not in Claudia project directory!"
+          echo "💡 Navigate to your Claudia installation directory first"
+          echo "💡 Expected files: src-tauri/Cargo.toml, package.json"
+          return 1
+      fi
+      
+      # Dependency validation
+      if [ ! -d "node_modules" ]; then
+          echo "⚠️  Node modules not found - dependencies may not be installed"
+          warnings+=("Dependencies may not be installed - run 'bun install'")
+      fi
+      
+      # Tauri CLI availability
+      if [ ! -f "node_modules/.bin/tauri" ] && ! command -v tauri &> /dev/null; then
+          echo "⚠️  Tauri CLI not found - build commands may fail"
+          warnings+=("Tauri CLI not available")
+      fi
+      
+      # Report warnings
+      if [ ${#warnings[@]} -gt 0 ]; then
+          echo "⚠️  Runtime warnings detected:"
+          for warning in "${warnings[@]}"; do
+              echo "   • $warning"
+          done
+          echo ""
+      fi
+      
+      return $validation_failures
+  }
+  
+  # Execute runtime validation
+  if ! runtime_environment_governor; then
+      echo "❌ Runtime environment validation failed"
       exit 1
   fi
 
   case "$1" in
       "dev"|"development"|"")
           echo "🔧 Starting development server..."
-          $PKG_MANAGER run tauri dev
+          bun run tauri dev
           ;;
       "build"|"production")
           echo "🏗  Building production version (deb, rpm)..."
-          $PKG_MANAGER run tauri build
+          bun run tauri build
           echo ""
           echo "✅ Build complete! Package files are in: ./src-tauri/target/release/bundle/"
           echo ""
@@ -582,14 +842,85 @@ WRAPPER_EOF
           ;;
       "build-exe"|"executable")
           echo "🏗  Building executable only..."
-          $PKG_MANAGER run tauri build --no-bundle
+          bun run tauri build --no-bundle
           echo ""
           echo "✅ Build complete! The executable is at: ./src-tauri/target/release/claudia"
           echo ""
-          echo "🚀 To run the production build, use:"
-          echo "   ./launch-production.sh"
+          
+          # Deployment Options Governor
+          deployment_options_governor() {
+              local executable_path="./src-tauri/target/release/claudia"
+              
+              if [ ! -f "$executable_path" ]; then
+                  echo "⚠️  Executable not found at expected location"
+                  return 1
+              fi
+              
+              echo "🎯 Deployment Options Governor: Choose installation method"
+              echo ""
+              echo "1. Local use only (recommended for development)"
+              echo "   - Run via: ./launch-production.sh"
+              echo "   - Executable stays in project directory"
+              echo ""
+              echo "2. Install to system PATH (/usr/local/bin)"
+              echo "   - Run via: claudia (from anywhere)"
+              echo "   - Requires sudo privileges"
+              echo "   - Creates system-wide symbolic link"
+              echo ""
+              echo "3. Install to user PATH (~/.local/bin)"
+              echo "   - Run via: claudia (from anywhere, user only)"
+              echo "   - No sudo required"
+              echo "   - Creates user-specific symbolic link"
+              echo ""
+              
+              read -p "Choose deployment option [1]: " DEPLOY_CHOICE
+              DEPLOY_CHOICE=${DEPLOY_CHOICE:-1}
+              
+              case "$DEPLOY_CHOICE" in
+                  1)
+                      echo "✅ Local deployment selected"
+                      echo "🚀 To run: ./launch-production.sh"
+                      ;;
+                  2)
+                      echo "🔧 Installing to system PATH..."
+                      if sudo ln -sf "$(pwd)/launch-production.sh" /usr/local/bin/claudia; then
+                          echo "✅ System installation complete!"
+                          echo "🚀 To run: claudia (from anywhere)"
+                          echo "🗑️  To uninstall: sudo rm /usr/local/bin/claudia"
+                      else
+                          echo "❌ System installation failed"
+                          echo "💡 Fallback: Use local deployment (option 1)"
+                      fi
+                      ;;
+                  3)
+                      echo "🔧 Installing to user PATH..."
+                      mkdir -p ~/.local/bin
+                      if ln -sf "$(pwd)/launch-production.sh" ~/.local/bin/claudia; then
+                          echo "✅ User installation complete!"
+                          if [[ ":$PATH:" != *":~/.local/bin:"* ]] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+                              echo "⚠️  ~/.local/bin not in PATH"
+                              echo "💡 Add to your shell profile:"
+                              echo "   echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.bashrc"
+                              echo "   source ~/.bashrc"
+                          fi
+                          echo "🚀 To run: claudia (from anywhere)"
+                          echo "🗑️  To uninstall: rm ~/.local/bin/claudia"
+                      else
+                          echo "❌ User installation failed"
+                          echo "💡 Fallback: Use local deployment (option 1)"
+                      fi
+                      ;;
+                  *)
+                      echo "❌ Invalid choice, using local deployment"
+                      echo "🚀 To run: ./launch-production.sh"
+                      ;;
+              esac
+          }
+          
+          deployment_options_governor
           echo ""
-          echo "⚠️  DO NOT run the executable directly - it needs WebKit environment variables!"
+          echo "⚠️  IMPORTANT: Always use the launcher (never run the raw executable)"
+          echo "💡 The launcher applies required WebKit environment variables"
           ;;
       "build-full"|"bundle"|"appimage")
           echo "🏗  Building with AppImage (requires fuse2, appstream-glib)..."
@@ -628,21 +959,233 @@ WRAPPER_EOF
           echo "🔧 Configuring AppImage environment for Tauri..."
           export APPIMAGE_EXTRACT_AND_RUN=1
           
-          if [ -f "src-tauri/tauri.conf.appimage.json" ]; then
-              echo "🚀 Starting AppImage build with configuration..."
-              $PKG_MANAGER run tauri build --config src-tauri/tauri.conf.appimage.json
-          else
-              echo "🚀 Starting AppImage build with default configuration..."
-              $PKG_MANAGER run tauri build
-          fi
+          # AppImage Build Governor with Cybernetic Fallback
+          appimage_build_governor() {
+              echo "🚀 Starting comprehensive build (deb + rpm + AppImage)..."
+              
+              local build_cmd=""
+              if [ -f "src-tauri/tauri.conf.appimage.json" ]; then
+                  echo "📋 Using AppImage-specific configuration..."
+                  build_cmd="bun run tauri build --config src-tauri/tauri.conf.appimage.json"
+              else
+                  echo "📋 Using default configuration..."
+                  build_cmd="bun run tauri build"
+              fi
+              
+              # Execute build with cybernetic assessment
+              if $build_cmd; then
+                  echo "✅ Core build process completed successfully"
+                  
+                  # Post-build assessment governor
+                  appimage_assessment_governor() {
+                      echo "🔍 Post-Build Assessment Governor: Analyzing outputs..."
+                      local success_count=0
+                      local warnings=()
+                      
+                      # Check executable
+                      if [ -f "./src-tauri/target/release/claudia" ]; then
+                          echo "✅ Executable: Successfully built"
+                          success_count=$((success_count + 1))
+                      else
+                          echo "❌ Executable: Missing"
+                          warnings+=("No executable generated")
+                      fi
+                      
+                      # Check .deb package
+                      if ls ./src-tauri/target/release/bundle/deb/*.deb &>/dev/null; then
+                          local deb_size=$(du -h ./src-tauri/target/release/bundle/deb/*.deb | cut -f1)
+                          echo "✅ Debian Package: Successfully built ($deb_size)"
+                          success_count=$((success_count + 1))
+                      else
+                          echo "⚠️  Debian Package: Missing"
+                          warnings+=("No .deb package generated")
+                      fi
+                      
+                      # Check .rpm package
+                      if ls ./src-tauri/target/release/bundle/rpm/*.rpm &>/dev/null; then
+                          local rpm_size=$(du -h ./src-tauri/target/release/bundle/rpm/*.rpm | cut -f1)
+                          echo "✅ RPM Package: Successfully built ($rpm_size)"
+                          success_count=$((success_count + 1))
+                      else
+                          echo "⚠️  RPM Package: Missing"
+                          warnings+=("No .rpm package generated")
+                      fi
+                      
+                      # Check AppImage - both directory and final file
+                      local appimage_status="unknown"
+                      if ls ./src-tauri/target/release/bundle/appimage/*.AppImage &>/dev/null; then
+                          local appimage_size=$(du -h ./src-tauri/target/release/bundle/appimage/*.AppImage | cut -f1)
+                          echo "✅ AppImage: Successfully built ($appimage_size)"
+                          success_count=$((success_count + 1))
+                          appimage_status="success"
+                      elif [ -d "./src-tauri/target/release/bundle/appimage/Claudia.AppDir" ]; then
+                          echo "⚠️  AppImage: Directory created but final packaging failed"
+                          echo "💡 AppDir available for manual packaging if needed"
+                          warnings+=("AppImage packaging incomplete (linuxdeploy issue)")
+                          appimage_status="partial"
+                      else
+                          echo "❌ AppImage: Build failed completely"
+                          warnings+=("No AppImage generated")
+                          appimage_status="failed"
+                      fi
+                      
+                      # Cybernetic Success Assessment
+                      echo ""
+                      echo "📊 Build Success Analysis:"
+                      echo "   • Successful outputs: $success_count/4 possible"
+                      local success_percent=$((success_count * 25))
+                      echo "   • Success rate: $success_percent%"
+                      
+                      if [ $success_count -ge 3 ]; then
+                          echo "🎉 BUILD ASSESSMENT: Highly Successful!"
+                          echo "💡 You have multiple deployment options available"
+                      elif [ $success_count -ge 2 ]; then
+                          echo "✅ BUILD ASSESSMENT: Successful with minor issues"
+                          echo "💡 Core functionality fully available"
+                      else
+                          echo "⚠️  BUILD ASSESSMENT: Partial success - may need attention"
+                      fi
+                      
+                      # Report warnings with guidance
+                      if [ ${#warnings[@]} -gt 0 ]; then
+                          echo ""
+                          echo "⚠️  Build warnings detected:"
+                          for warning in "${warnings[@]}"; do
+                              echo "   • $warning"
+                          done
+                          
+                          # Specific guidance for AppImage issues
+                          if [ "$appimage_status" = "partial" ]; then
+                              echo ""
+                              echo "🔧 AppImage Troubleshooting:"
+                              echo "   • This is a known linuxdeploy compatibility issue"
+                              echo "   • Your .deb and .rpm packages work perfectly"
+                              echo "   • For portable deployment, use the .deb package"
+                              echo "   • AppDir is available for manual AppImage creation if needed"
+                          fi
+                      fi
+                      
+                      return 0
+                  }
+                  
+                  appimage_assessment_governor
+              else
+                  echo "❌ Build process failed"
+                  echo "💡 Check the error messages above for specific issues"
+                  return 1
+              fi
+          }
+          
+          appimage_build_governor
           echo ""
           echo "✅ Build complete! Output files are in: ./src-tauri/target/release/"
           echo ""
-          echo "🚀 To run the production executable, use:"
-          echo "   ./launch-production.sh"
+          echo "📦 Package files available:"
+          echo "   • Executable: ./src-tauri/target/release/claudia"
+          echo "   • Debian package: ./src-tauri/target/release/bundle/deb/*.deb"
+          echo "   • RPM package: ./src-tauri/target/release/bundle/rpm/*.rpm"
+          echo "   • AppImage: ./src-tauri/target/release/bundle/appimage/*.AppImage"
           echo ""
-          echo "📦 AppImage files (if built) are in: ./src-tauri/target/release/bundle/appimage/"
-          echo "⚠️  DO NOT run the executable directly - it needs WebKit environment variables!"
+          
+          # Deployment Options Governor (same as build-exe)
+          deployment_options_governor() {
+              local executable_path="./src-tauri/target/release/claudia"
+              
+              if [ ! -f "$executable_path" ]; then
+                  echo "⚠️  Executable not found at expected location"
+                  return 1
+              fi
+              
+              echo "🎯 Deployment Options Governor: Choose installation method"
+              echo ""
+              echo "1. Local use only (recommended for development)"
+              echo "   - Run via: ./launch-production.sh"
+              echo "   - Executable stays in project directory"
+              echo ""
+              echo "2. Install to system PATH (/usr/local/bin)"
+              echo "   - Run via: claudia (from anywhere)"
+              echo "   - Requires sudo privileges"
+              echo "   - Creates system-wide symbolic link"
+              echo ""
+              echo "3. Install to user PATH (~/.local/bin)"
+              echo "   - Run via: claudia (from anywhere, user only)"
+              echo "   - No sudo required"
+              echo "   - Creates user-specific symbolic link"
+              echo ""
+              echo "4. Install package (recommended for production)"
+              echo "   - Install .deb/.rpm/.AppImage as appropriate"
+              echo "   - System package manager integration"
+              echo ""
+              
+              read -p "Choose deployment option [1]: " DEPLOY_CHOICE
+              DEPLOY_CHOICE=${DEPLOY_CHOICE:-1}
+              
+              case "$DEPLOY_CHOICE" in
+                  1)
+                      echo "✅ Local deployment selected"
+                      echo "🚀 To run: ./launch-production.sh"
+                      ;;
+                  2)
+                      echo "🔧 Installing to system PATH..."
+                      if sudo ln -sf "$(pwd)/launch-production.sh" /usr/local/bin/claudia; then
+                          echo "✅ System installation complete!"
+                          echo "🚀 To run: claudia (from anywhere)"
+                          echo "🗑️  To uninstall: sudo rm /usr/local/bin/claudia"
+                      else
+                          echo "❌ System installation failed"
+                          echo "💡 Fallback: Use local deployment (option 1)"
+                      fi
+                      ;;
+                  3)
+                      echo "🔧 Installing to user PATH..."
+                      mkdir -p ~/.local/bin
+                      if ln -sf "$(pwd)/launch-production.sh" ~/.local/bin/claudia; then
+                          echo "✅ User installation complete!"
+                          if [[ ":$PATH:" != *":~/.local/bin:"* ]] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+                              echo "⚠️  ~/.local/bin not in PATH"
+                              echo "💡 Add to your shell profile:"
+                              echo "   echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.bashrc"
+                              echo "   source ~/.bashrc"
+                          fi
+                          echo "🚀 To run: claudia (from anywhere)"
+                          echo "🗑️  To uninstall: rm ~/.local/bin/claudia"
+                      else
+                          echo "❌ User installation failed"
+                          echo "💡 Fallback: Use local deployment (option 1)"
+                      fi
+                      ;;
+                  4)
+                      echo "📦 Package installation options:"
+                      echo ""
+                      
+                      # Find available packages
+                      if ls ./src-tauri/target/release/bundle/deb/*.deb &>/dev/null; then
+                          echo "🔹 Debian package (.deb):"
+                          echo "   sudo dpkg -i ./src-tauri/target/release/bundle/deb/*.deb"
+                      fi
+                      if ls ./src-tauri/target/release/bundle/rpm/*.rpm &>/dev/null; then
+                          echo "🔹 RPM package (.rpm):"
+                          echo "   sudo rpm -i ./src-tauri/target/release/bundle/rpm/*.rpm"
+                      fi
+                      if ls ./src-tauri/target/release/bundle/appimage/*.AppImage &>/dev/null; then
+                          echo "🔹 AppImage (universal):"
+                          echo "   chmod +x ./src-tauri/target/release/bundle/appimage/*.AppImage"
+                          echo "   ./src-tauri/target/release/bundle/appimage/*.AppImage"
+                      fi
+                      echo ""
+                      echo "💡 Choose the package format appropriate for your distribution"
+                      ;;
+                  *)
+                      echo "❌ Invalid choice, using local deployment"
+                      echo "🚀 To run: ./launch-production.sh"
+                      ;;
+              esac
+          }
+          
+          deployment_options_governor
+          echo ""
+          echo "⚠️  IMPORTANT: Always use the launcher (never run the raw executable)"
+          echo "💡 The launcher applies required WebKit environment variables"
           ;;
       "clean")
           echo "🧹 Cleaning build artifacts..."
@@ -764,8 +1307,50 @@ PROD_LAUNCHER_EOF
   chmod +x launch-production.sh
   echo "✅ Production launcher created: launch-production.sh"
   
+  # Package Manager Configuration Governor (Cybernetic Pattern)
+  echo "🔧 Applying package manager governance to Tauri configuration..."
+  
+  package_manager_governor() {
+      local config_file="$1"
+      local detected_pm="bun"  # Claudia requires Bun
+      
+      # Validate Bun is available
+      if ! command -v bun &> /dev/null; then
+          echo "❌ CRITICAL: Bun not found - cannot configure Tauri"
+          return 1
+      fi
+      
+      echo "🎯 Package manager governor configured: $detected_pm (required for Claudia)"
+      
+      # Apply configuration updates based on detected manager
+      if [ -f "$config_file" ]; then
+          # Create backup before modification
+          cp "$config_file" "${config_file}.backup"
+          
+          # Update beforeDevCommand and beforeBuildCommand
+          sed -i "s/\"beforeDevCommand\": \"bun run dev\"/\"beforeDevCommand\": \"$detected_pm run dev\"/" "$config_file"
+          sed -i "s/\"beforeBuildCommand\": \"bun run build\"/\"beforeBuildCommand\": \"$detected_pm run build\"/" "$config_file"
+          
+          echo "✅ Updated $config_file for $detected_pm package manager"
+          echo "💾 Backup saved as ${config_file}.backup"
+          return 0
+      else
+          echo "⚠️  Configuration file not found: $config_file"
+          return 1
+      fi
+  }
+  
+  # Apply governor to main Tauri configuration
+  if package_manager_governor "src-tauri/tauri.conf.json"; then
+      echo "✅ Main Tauri configuration updated with package manager governance"
+  else
+      echo "⚠️  Could not update main Tauri configuration"
+  fi
+
   # Create AppImage configuration for build-full option
   echo "🔧 Creating AppImage configuration..."
+  
+  # AppImage configuration uses Bun (essential for Claudia)
   cat > src-tauri/tauri.conf.appimage.json << 'APPIMAGE_EOF'
 {
   "$schema": "https://schema.tauri.app/config/2",

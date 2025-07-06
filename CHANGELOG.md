@@ -5,21 +5,80 @@ All notable changes to the Claudia WebKit Fix for Manjaro Linux will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.0] - 2025-07-06 - Cybernetic Ecology Edition
 
-### Added
-- **Production Build Launcher Script**
-  - New `launch-production.sh` script for running production executables
-  - Automatically sets WebKit environment variables for production builds
-  - Prevents black screen issues on `build-exe` and `build-full` outputs
-  - Auto-detects executable location with fallback options
-  - Clear usage instructions displayed after build completion
+### 🎯 Major Features - Cybernetic Governance System
 
-### Changed
-- **Build Command Output**
-  - All build commands now display clear instructions to use `launch-production.sh`
-  - Added warnings against running executables directly
-  - Enhanced build completion messages with specific paths
+#### Added
+- **Environment Validation Governor**: Intelligent Bun detection, installation, and functional testing
+- **System Package Governor**: Smart dependency management with learning from failures
+- **AppImage Capability Governor**: Intelligent AppImage ecosystem analysis and fallback handling
+- **Build Assessment Governor**: Post-build analysis with quantified success rates and guidance
+- **Deployment Options Governor**: Multiple deployment paths with user agency and PATH management
+- **Runtime Environment Governor**: Execution context validation with project and dependency checks
+
+#### Enhanced
+- **Bun Requirement Recognition**: Properly detects Claudia's essential Bun dependency (removed npm fallback)
+- **Package Name Resolution**: Validates package existence before installation attempts
+- **Capability-Based Dependencies**: Checks FUSE and AppStream functionality, not just package presence
+- **Build Success Assessment**: Quantified success rates (e.g., 75% = 3/4 package formats successful)
+- **Intelligent AppImage Handling**: Recognizes partial success (AppDir created, final packaging failed)
+
+### 🏛️ Cybernetic Principles Implementation
+
+#### Added
+- **Probe-Sense-Respond Patterns**: Environmental detection and adaptive configuration responses
+- **Antifragile Design**: Multiple success paths, graceful degradation, learning from failures
+- **Self-Regulating Systems**: Autonomous validation and error recovery governors
+- **Information Flow**: Clear feedback loops and diagnostic information throughout system
+- **User Agency**: Intelligent choice presentation with trade-off explanations
+- **Recursive Patterns**: Consistent validation patterns applied across all system levels
+
+### 🔄 Breaking Changes
+- **Removed npm fallback**: Claudia requires Bun for compilation features (--compile, file embedding)
+- **Enhanced package validation**: Removes invalid package names (e.g., libfuse2 doesn't exist)
+- **New deployment workflow**: Interactive deployment options after successful builds
+
+### 🎮 User Experience Improvements
+
+#### Added
+- **Deployment Options After Building**: Interactive choice of local, system, user, or package installation
+- **PATH Intelligence**: Automatic detection and configuration guidance for ~/.local/bin
+- **Build Assessment Reporting**: Clear success percentage and impact analysis
+- **AppImage Troubleshooting**: Specific guidance for linuxdeploy compatibility issues
+- **Cybernetic Recovery Patterns**: Structured approach to issue resolution
+
+#### Enhanced
+- **Error Messages**: Specific, actionable guidance with cybernetic learning principles
+- **Validation Feedback**: Real-time validation with immediate remediation suggestions
+- **Installation Options**: Four deployment methods with clear trade-offs and uninstall procedures
+
+### 🔧 Technical Improvements
+
+#### Fixed
+- **JSON Schema Issues**: Proper `$schema` property in tauri.conf.appimage.json (quoted heredoc)
+- **Variable Expansion**: Correct bash variable handling in launcher script generation
+- **Package Name Validation**: Removed non-existent packages, added capability-based checking
+- **Heredoc Escaping**: Proper variable preservation in generated scripts
+
+#### Added
+- **Individual Package Installation**: Isolates failures for better error analysis
+- **Alternative Package Suggestions**: Automatic search for similar packages when installation fails
+- **Runtime Bun Validation**: Functional testing beyond simple command availability
+- **Comprehensive Build Validation**: Multi-stage verification of build outputs
+
+### 📊 Build System Enhancements
+
+#### Added
+- **Multi-Format Assessment**: Tracks executable, .deb, .rpm, and AppImage success individually
+- **Partial Success Recognition**: Intelligent handling of AppDir creation vs final AppImage packaging
+- **Build Success Metrics**: Quantified reporting (e.g., "SUCCESS RATE: 75%")
+- **Deployment Option Integration**: Seamless transition from build assessment to deployment choice
+
+#### Enhanced
+- **AppImage Error Handling**: Distinguishes between linuxdeploy failure and complete build failure
+- **Build Output Analysis**: Detailed file size and location reporting for successful packages
+- **Fallback Strategies**: Clear alternative deployment methods when preferred options fail
 
 ## [1.1.0] - 2025-01-05
 
@@ -118,6 +177,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1`
 - `WEBKIT_DISABLE_DMABUF_RENDERER=1`
 - `WEBKIT_FORCE_SANDBOX=0`
+
+---
+
+## Development Philosophy Evolution
+
+This project demonstrates the evolution from simple script automation to **cybernetic governance systems**:
+
+### **v1.0 - Linear Automation** (2024-12-15)
+- Basic script with linear execution
+- Simple error handling with exit on failure
+- Fixed workflow with limited adaptability
+
+### **v1.1 - Enhanced Error Handling** (2025-01-05)  
+- Better error recovery with fallback options
+- Multiple build targets and validation tools
+- Improved user experience with help systems
+
+### **v2.0 - Cybernetic Governance** (2025-07-06)
+- **Intelligent adaptation** based on environmental detection
+- **Learning from failures** with specific remediation guidance
+- **User agency** with intelligent optionality rather than forced automation
+- **Antifragile design** that strengthens from encountering problems
+- **Recursive validation** patterns applied consistently across system levels
+
+The v2.0 release represents a fundamental shift toward **Third Wave AI principles**, where the system becomes a collaborative partner rather than a rigid automation tool, embodying concepts from:
+
+- **Stafford Beer**: Viable System Model with recursive autonomy
+- **Gregory Bateson**: Cybernetic information ecology and feedback loops
+- **Jacques Rancière**: Collaborative intelligence frameworks
+- **Donna Haraway**: "Staying with the trouble" and responsible complexity
+
+**Framework Repository**: [cybernetic-ecologies](https://github.com/macawi-ai/cybernetic-ecologies)
 
 ---
 

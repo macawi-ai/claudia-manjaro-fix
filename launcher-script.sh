@@ -81,18 +81,31 @@
   echo "📍 Working directory: $(pwd)"
   echo ""
 
+  # Detect available package manager with fallback chain
+  if command -v bun &> /dev/null; then
+      PKG_MANAGER="bun"
+      echo "📦 Using Bun package manager"
+  elif command -v npm &> /dev/null; then
+      PKG_MANAGER="npm"
+      echo "📦 Using npm package manager"
+  else
+      echo "❌ No JavaScript package manager found (neither bun nor npm)"
+      echo "💡 Please install bun or npm first"
+      exit 1
+  fi
+
   case "$1" in
       "dev"|"development"|"")
           echo "🔧 Starting development server..."
-          bun run tauri dev
+          $PKG_MANAGER run tauri dev
           ;;
       "build"|"production")
           echo "🏗  Building production version (deb, rpm)..."
-          bun run tauri build
+          $PKG_MANAGER run tauri build
           ;;
       "build-exe"|"executable")
           echo "🏗  Building executable only..."
-          bun run tauri build --no-bundle
+          $PKG_MANAGER run tauri build --no-bundle
           ;;
       "build-full"|"bundle"|"appimage")
           echo "🏗  Building with AppImage (requires fuse2, appstream-glib)..."
@@ -134,10 +147,10 @@
           
           if [ -f "src-tauri/tauri.conf.appimage.json" ]; then
               echo "🚀 Starting AppImage build with configuration..."
-              bun run tauri build --config src-tauri/tauri.conf.appimage.json
+              $PKG_MANAGER run tauri build --config src-tauri/tauri.conf.appimage.json
           else
               echo "🚀 Starting AppImage build with default configuration..."
-              bun run tauri build
+              $PKG_MANAGER run tauri build
           fi
           ;;
       "clean")
