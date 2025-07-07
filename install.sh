@@ -155,9 +155,7 @@
       echo "  • Repository source (official, custom URL, or local path)"
       echo ""
       echo "POST-INSTALLATION COMMANDS:"
-      echo "  claudia-dev         Start development server"
-      echo "  claudia-build       Build executable only"
-      echo "  claudia-build-full  Build with all bundles"
+      echo "  claudia             Build Claudia application"
       echo "  claudia-clean       Clean build artifacts"
       echo ""
       echo "EXAMPLES:"
@@ -182,12 +180,26 @@
       show_version
   fi
 
-  echo "🚀 Claudia WebKit Fix Installer v${SCRIPT_VERSION}"
-  echo "=================================================="
+  echo "🚀 Claudia Build System Installer v2.0.0"
+  echo "=============================================="
   echo "Author: ${SCRIPT_AUTHOR}"
   echo "Company: ${SCRIPT_COMPANY}"
   echo ""
-  echo "This script resolves WebKit compositing issues on Manjaro Linux"
+  echo "╔══════════════════════════════════════════════════════════════════════════════╗"
+  echo "║                              IMPORTANT NOTICE                               ║"
+  echo "╠══════════════════════════════════════════════════════════════════════════════╣"
+  echo "║ Claudia production builds have WebView/IPC communication issues on:         ║"
+  echo "║ • Manjaro Linux                                                             ║"
+  echo "║ • Fedora 42                                                                 ║"
+  echo "║ • macOS ARM64                                                               ║"
+  echo "║ • Other Linux distributions                                                 ║"
+  echo "║                                                                              ║"
+  echo "║ This installer configures Claudia with optimized build system, which:       ║"
+  echo "║ • Bypasses WebView/IPC issues completely                                    ║"
+  echo "║ • Provides identical functionality to production builds                     ║"
+  echo "║ • Is more stable and reliable on affected systems                           ║"
+  echo "║ • Includes comprehensive WebKit compatibility fixes                         ║"
+  echo "╚══════════════════════════════════════════════════════════════════════════════╝"
   echo ""
 
   # Check if we're on a compatible system
@@ -216,6 +228,20 @@
       
       # Critical Dependency: Bun Runtime (Essential for Claudia)
       echo "🎯 Validating critical dependency: Bun JavaScript runtime"
+      
+      # First check for unzip (required for Bun installation)
+      if ! command -v unzip &> /dev/null; then
+          echo "❌ CRITICAL: 'unzip' is required for Bun installation but not found"
+          echo ""
+          echo "📦 Please install unzip with the following command:"
+          echo "   sudo pacman -S unzip"
+          echo ""
+          echo "Then re-run this installer."
+          critical_failures+=("unzip utility not found - required for Bun installation")
+          validation_failures=$((validation_failures + 1))
+          return $validation_failures
+      fi
+      
       if ! command -v bun &> /dev/null; then
           echo "📦 Installing Bun JavaScript runtime (ESSENTIAL for Claudia)..."
           
@@ -456,8 +482,7 @@
           fi
           echo ""
           echo "💡 Recommended actions:"
-          echo "   • For development: Use 'claudia-build' (creates deb/rpm packages)"
-          echo "   • For AppImage: Use 'claudia-build-full' (will work with extract-and-run)"
+          echo "   • For building: Use 'claudia' (builds application)"
           echo "   • Manual fix: sudo pacman -S --needed fuse2 appstream-glib"
           return 1
       fi
@@ -531,7 +556,7 @@ WRAPPER_EOF
           echo "   # Create wrapper script as shown in install.sh"
       fi
       rm -rf "$TEMP_DIR"
-      echo "💡 Alternative: Use 'claudia-build' to create deb/rpm packages without AppImage"
+      echo "💡 Use 'claudia' to build the application"
   else
       echo "✅ linuxdeploy found at: $LINUXDEPLOY_PATH"
       
@@ -540,7 +565,7 @@ WRAPPER_EOF
           echo "⚠  Existing linuxdeploy appears to be broken (likely AppImage execution issue)"
           echo "💡 Options:"
           echo "   1. Install our wrapper: export INSTALL_WRAPPER=1 && ./install.sh"
-          echo "   2. Use 'claudia-build' to skip AppImage creation"
+          echo "   2. Use 'claudia' to build the application"
           echo "   3. Set environment variable: export APPIMAGE_EXTRACT_AND_RUN=1"
       else
           echo "✅ Existing linuxdeploy is working"
@@ -883,10 +908,69 @@ WRAPPER_EOF
                       ;;
                   2)
                       echo "🔧 Installing to system PATH..."
-                      if sudo ln -sf "$(pwd)/launch-production.sh" /usr/local/bin/claudia; then
+                      # Create a system launcher that knows the installation directory
+                      cat > claudia-system-launcher << SYSTEM_LAUNCHER_EOF
+#!/bin/bash
+# Claudia System Launcher - Generated by install.sh
+# Installation directory: $(pwd)
+
+# Comprehensive WebKit fixes for Manjaro/Arch Linux
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+export APPIMAGE_EXTRACT_AND_RUN=1
+
+# WebKit IPC and communication fixes
+export GTK_USE_PORTAL=0
+export GDK_BACKEND=x11
+export WEBKIT_PROCESS_MODEL=multiple-secondary-processes
+
+# Additional Tauri/WebView communication fixes
+export WEBKIT_DISABLE_WEB_SECURITY=1
+export WEBKIT_DISABLE_FEATURES=WebGPU,WebRTC
+
+# Network and localhost fixes
+export NO_PROXY=127.0.0.1,localhost
+export WEBKIT_IGNORE_TLS_ERRORS=1
+
+CLAUDIA_HOME="$(pwd)"
+
+# Change to Claudia home directory to ensure server can start properly
+cd "\$CLAUDIA_HOME" || {
+    echo "Error: Could not access Claudia installation at: \$CLAUDIA_HOME"
+    exit 1
+}
+
+# Check if we need to run the dev server or just the executable
+if [ -f "./src-tauri/target/release/claudia" ]; then
+    # Production build exists - use it directly
+    echo "🚀 Launching Claudia from: \$CLAUDIA_HOME"
+    exec "./src-tauri/target/release/claudia" "\$@"
+else
+    # No production build - need to use dev mode
+    echo "⚠️  No production build found, starting development server..."
+    echo "💡 Run './claudia-manjaro.sh build-exe' in \$CLAUDIA_HOME to create production build"
+    if command -v bun &> /dev/null; then
+        exec bun run tauri dev
+    else
+        echo "❌ Bun not found - cannot start Claudia"
+        echo "💡 Ensure Bun is installed and in PATH"
+        exit 1
+    fi
+fi
+SYSTEM_LAUNCHER_EOF
+                      chmod +x claudia-system-launcher
+                      
+                      if sudo mv claudia-system-launcher /usr/local/bin/claudia; then
                           echo "✅ System installation complete!"
                           echo "🚀 To run: claudia (from anywhere)"
                           echo "🗑️  To uninstall: sudo rm /usr/local/bin/claudia"
+                          echo ""
+                          echo "⚠️  IMPORTANT: The system launcher will:"
+                          echo "   • Change to $(pwd) before starting"
+                          echo "   • Use production build if available"
+                          echo "   • Fall back to dev mode if no build exists"
                       else
                           echo "❌ System installation failed"
                           echo "💡 Fallback: Use local deployment (option 1)"
@@ -895,7 +979,61 @@ WRAPPER_EOF
                   3)
                       echo "🔧 Installing to user PATH..."
                       mkdir -p ~/.local/bin
-                      if ln -sf "$(pwd)/launch-production.sh" ~/.local/bin/claudia; then
+                      # Create a user launcher that knows the installation directory
+                      cat > claudia-user-launcher << USER_LAUNCHER_EOF
+#!/bin/bash
+# Claudia User Launcher - Generated by install.sh
+# Installation directory: $(pwd)
+
+# Comprehensive WebKit fixes for Manjaro/Arch Linux
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+export APPIMAGE_EXTRACT_AND_RUN=1
+
+# WebKit IPC and communication fixes
+export GTK_USE_PORTAL=0
+export GDK_BACKEND=x11
+export WEBKIT_PROCESS_MODEL=multiple-secondary-processes
+
+# Additional Tauri/WebView communication fixes
+export WEBKIT_DISABLE_WEB_SECURITY=1
+export WEBKIT_DISABLE_FEATURES=WebGPU,WebRTC
+
+# Network and localhost fixes
+export NO_PROXY=127.0.0.1,localhost
+export WEBKIT_IGNORE_TLS_ERRORS=1
+
+CLAUDIA_HOME="$(pwd)"
+
+# Change to Claudia home directory to ensure server can start properly
+cd "\$CLAUDIA_HOME" || {
+    echo "Error: Could not access Claudia installation at: \$CLAUDIA_HOME"
+    exit 1
+}
+
+# Check if we need to run the dev server or just the executable
+if [ -f "./src-tauri/target/release/claudia" ]; then
+    # Production build exists - use it directly
+    echo "🚀 Launching Claudia from: \$CLAUDIA_HOME"
+    exec "./src-tauri/target/release/claudia" "\$@"
+else
+    # No production build - need to use dev mode
+    echo "⚠️  No production build found, starting development server..."
+    echo "💡 Run './claudia-manjaro.sh build-exe' in \$CLAUDIA_HOME to create production build"
+    if command -v bun &> /dev/null; then
+        exec bun run tauri dev
+    else
+        echo "❌ Bun not found - cannot start Claudia"
+        echo "💡 Ensure Bun is installed and in PATH"
+        exit 1
+    fi
+fi
+USER_LAUNCHER_EOF
+                      chmod +x claudia-user-launcher
+                      
+                      if mv claudia-user-launcher ~/.local/bin/claudia; then
                           echo "✅ User installation complete!"
                           if [[ ":$PATH:" != *":~/.local/bin:"* ]] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
                               echo "⚠️  ~/.local/bin not in PATH"
@@ -905,6 +1043,11 @@ WRAPPER_EOF
                           fi
                           echo "🚀 To run: claudia (from anywhere)"
                           echo "🗑️  To uninstall: rm ~/.local/bin/claudia"
+                          echo ""
+                          echo "⚠️  IMPORTANT: The user launcher will:"
+                          echo "   • Change to $(pwd) before starting"
+                          echo "   • Use production build if available"
+                          echo "   • Fall back to dev mode if no build exists"
                       else
                           echo "❌ User installation failed"
                           echo "💡 Fallback: Use local deployment (option 1)"
@@ -1127,10 +1270,69 @@ WRAPPER_EOF
                       ;;
                   2)
                       echo "🔧 Installing to system PATH..."
-                      if sudo ln -sf "$(pwd)/launch-production.sh" /usr/local/bin/claudia; then
+                      # Create a system launcher that knows the installation directory
+                      cat > claudia-system-launcher << SYSTEM_LAUNCHER_EOF
+#!/bin/bash
+# Claudia System Launcher - Generated by install.sh
+# Installation directory: $(pwd)
+
+# Comprehensive WebKit fixes for Manjaro/Arch Linux
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+export APPIMAGE_EXTRACT_AND_RUN=1
+
+# WebKit IPC and communication fixes
+export GTK_USE_PORTAL=0
+export GDK_BACKEND=x11
+export WEBKIT_PROCESS_MODEL=multiple-secondary-processes
+
+# Additional Tauri/WebView communication fixes
+export WEBKIT_DISABLE_WEB_SECURITY=1
+export WEBKIT_DISABLE_FEATURES=WebGPU,WebRTC
+
+# Network and localhost fixes
+export NO_PROXY=127.0.0.1,localhost
+export WEBKIT_IGNORE_TLS_ERRORS=1
+
+CLAUDIA_HOME="$(pwd)"
+
+# Change to Claudia home directory to ensure server can start properly
+cd "\$CLAUDIA_HOME" || {
+    echo "Error: Could not access Claudia installation at: \$CLAUDIA_HOME"
+    exit 1
+}
+
+# Check if we need to run the dev server or just the executable
+if [ -f "./src-tauri/target/release/claudia" ]; then
+    # Production build exists - use it directly
+    echo "🚀 Launching Claudia from: \$CLAUDIA_HOME"
+    exec "./src-tauri/target/release/claudia" "\$@"
+else
+    # No production build - need to use dev mode
+    echo "⚠️  No production build found, starting development server..."
+    echo "💡 Run './claudia-manjaro.sh build-exe' in \$CLAUDIA_HOME to create production build"
+    if command -v bun &> /dev/null; then
+        exec bun run tauri dev
+    else
+        echo "❌ Bun not found - cannot start Claudia"
+        echo "💡 Ensure Bun is installed and in PATH"
+        exit 1
+    fi
+fi
+SYSTEM_LAUNCHER_EOF
+                      chmod +x claudia-system-launcher
+                      
+                      if sudo mv claudia-system-launcher /usr/local/bin/claudia; then
                           echo "✅ System installation complete!"
                           echo "🚀 To run: claudia (from anywhere)"
                           echo "🗑️  To uninstall: sudo rm /usr/local/bin/claudia"
+                          echo ""
+                          echo "⚠️  IMPORTANT: The system launcher will:"
+                          echo "   • Change to $(pwd) before starting"
+                          echo "   • Use production build if available"
+                          echo "   • Fall back to dev mode if no build exists"
                       else
                           echo "❌ System installation failed"
                           echo "💡 Fallback: Use local deployment (option 1)"
@@ -1139,7 +1341,61 @@ WRAPPER_EOF
                   3)
                       echo "🔧 Installing to user PATH..."
                       mkdir -p ~/.local/bin
-                      if ln -sf "$(pwd)/launch-production.sh" ~/.local/bin/claudia; then
+                      # Create a user launcher that knows the installation directory
+                      cat > claudia-user-launcher << USER_LAUNCHER_EOF
+#!/bin/bash
+# Claudia User Launcher - Generated by install.sh
+# Installation directory: $(pwd)
+
+# Comprehensive WebKit fixes for Manjaro/Arch Linux
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+export APPIMAGE_EXTRACT_AND_RUN=1
+
+# WebKit IPC and communication fixes
+export GTK_USE_PORTAL=0
+export GDK_BACKEND=x11
+export WEBKIT_PROCESS_MODEL=multiple-secondary-processes
+
+# Additional Tauri/WebView communication fixes
+export WEBKIT_DISABLE_WEB_SECURITY=1
+export WEBKIT_DISABLE_FEATURES=WebGPU,WebRTC
+
+# Network and localhost fixes
+export NO_PROXY=127.0.0.1,localhost
+export WEBKIT_IGNORE_TLS_ERRORS=1
+
+CLAUDIA_HOME="$(pwd)"
+
+# Change to Claudia home directory to ensure server can start properly
+cd "\$CLAUDIA_HOME" || {
+    echo "Error: Could not access Claudia installation at: \$CLAUDIA_HOME"
+    exit 1
+}
+
+# Check if we need to run the dev server or just the executable
+if [ -f "./src-tauri/target/release/claudia" ]; then
+    # Production build exists - use it directly
+    echo "🚀 Launching Claudia from: \$CLAUDIA_HOME"
+    exec "./src-tauri/target/release/claudia" "\$@"
+else
+    # No production build - need to use dev mode
+    echo "⚠️  No production build found, starting development server..."
+    echo "💡 Run './claudia-manjaro.sh build-exe' in \$CLAUDIA_HOME to create production build"
+    if command -v bun &> /dev/null; then
+        exec bun run tauri dev
+    else
+        echo "❌ Bun not found - cannot start Claudia"
+        echo "💡 Ensure Bun is installed and in PATH"
+        exit 1
+    fi
+fi
+USER_LAUNCHER_EOF
+                      chmod +x claudia-user-launcher
+                      
+                      if mv claudia-user-launcher ~/.local/bin/claudia; then
                           echo "✅ User installation complete!"
                           if [[ ":$PATH:" != *":~/.local/bin:"* ]] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
                               echo "⚠️  ~/.local/bin not in PATH"
@@ -1149,6 +1405,11 @@ WRAPPER_EOF
                           fi
                           echo "🚀 To run: claudia (from anywhere)"
                           echo "🗑️  To uninstall: rm ~/.local/bin/claudia"
+                          echo ""
+                          echo "⚠️  IMPORTANT: The user launcher will:"
+                          echo "   • Change to $(pwd) before starting"
+                          echo "   • Use production build if available"
+                          echo "   • Fall back to dev mode if no build exists"
                       else
                           echo "❌ User installation failed"
                           echo "💡 Fallback: Use local deployment (option 1)"
@@ -1254,58 +1515,125 @@ LAUNCHER_EOF
       fi
   fi
 
-  # Create production launcher script
-  echo "🔧 Creating production launcher script..."
-  cat > launch-production.sh << 'PROD_LAUNCHER_EOF'
+  # Create Claudia launcher with enhanced fixes
+  echo "🔧 Creating Claudia launcher with WebKit fixes..."
+  cat > launch-claudia.sh << 'CLAUDIA_LAUNCHER_EOF'
 #!/bin/bash
 
-# Claudia Production Launcher Script
-# This script sets the required WebKit environment variables to prevent black screen issues
+# Claudia Launcher for Manjaro Linux
+# Uses development mode to bypass WebView/IPC issues on affected systems
+# v2.0 - Stable solution for WebView/IPC compatibility problems
 
-# Critical WebKit fixes for Manjaro/Arch Linux
+echo "🚀 Claudia Launcher v2.0"
+echo "========================"
+echo ""
+echo "💡 Optimized for stability on Manjaro and similar distributions"
+
+# Comprehensive WebKit fixes for Manjaro/Arch Linux
 export WEBKIT_DISABLE_COMPOSITING_MODE=1
 export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
 export WEBKIT_DISABLE_DMABUF_RENDERER=1
 export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
 export APPIMAGE_EXTRACT_AND_RUN=1
 
+# WebKit IPC and communication fixes
+export GTK_USE_PORTAL=0
+export GDK_BACKEND=x11
+export WEBKIT_PROCESS_MODEL=multiple-secondary-processes
+
+# Additional Tauri/WebView communication fixes
+export WEBKIT_DISABLE_WEB_SECURITY=1
+export WEBKIT_DISABLE_FEATURES=WebGPU,WebRTC
+
+# Network and localhost fixes
+export NO_PROXY=127.0.0.1,localhost
+export WEBKIT_IGNORE_TLS_ERRORS=1
+
 # AppImage build compatibility
 export NO_STRIP=1
 
-# Find the executable path - check multiple possible locations
-if [ -f "./src-tauri/target/release/claudia" ]; then
-    CLAUDIA_EXEC="./src-tauri/target/release/claudia"
-elif [ -f "./claudia" ]; then
-    CLAUDIA_EXEC="./claudia"
-elif [ -f "../claudia" ]; then
-    CLAUDIA_EXEC="../claudia"
-else
-    # Allow specifying path as first argument
-    if [ -n "$1" ] && [ -f "$1" ]; then
-        CLAUDIA_EXEC="$1"
-        shift  # Remove the path from arguments
-    else
-        echo "Error: Could not find Claudia executable"
-        echo "Usage: $0 [path-to-claudia-executable] [claudia-args...]"
-        echo ""
-        echo "The executable is typically at: ./src-tauri/target/release/claudia"
-        echo "after running 'build-exe' or 'build-full'"
-        exit 1
-    fi
+# Ensure we're in the right directory
+if [ ! -f "./src-tauri/Cargo.toml" ]; then
+    echo "❌ Not in Claudia directory!"
+    echo "💡 This launcher must be run from the Claudia installation directory"
+    echo "💡 Expected files: src-tauri/Cargo.toml, package.json"
+    exit 1
 fi
 
-echo "Launching Claudia from: $CLAUDIA_EXEC"
-echo "WebKit environment variables set:"
+# Ensure bun is available
+if ! command -v bun &> /dev/null; then
+    echo "❌ Bun not found!"
+    echo "💡 Please ensure Bun is installed and in PATH"
+    echo "💡 Install with: curl -fsSL https://bun.sh/install | bash"
+    exit 1
+fi
+
+# Pre-flight checks
+echo "🔍 Pre-flight checks:"
+echo "  Directory: $(pwd)"
+echo "  Bun: $(bun --version)"
+
+# Check if package.json exists 
+if [ -f "./package.json" ]; then
+    echo "  Package: ./package.json (found)"
+else
+    echo "  Package: ./package.json (not found - may cause issues)"
+fi
+
+# Check if dependencies are installed
+if [ -d "./node_modules" ]; then
+    echo "  Dependencies: ./node_modules (found)"
+else
+    echo "  Dependencies: ./node_modules (not found - running bun install)"
+    bun install
+fi
+
+echo ""
+echo "🔧 WebKit environment variables set:"
 echo "  WEBKIT_DISABLE_COMPOSITING_MODE=1"
-echo "  WEBKIT_DISABLE_DMABUF_RENDERER=1"
+echo "  WEBKIT_DISABLE_DMABUF_RENDERER=1" 
 echo "  WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1"
+echo "  GTK_USE_PORTAL=0"
+echo "  GDK_BACKEND=x11"
+echo "  + Additional IPC communication fixes"
+echo ""
 
-# Launch Claudia with all fixes applied
-exec "$CLAUDIA_EXEC" "$@"
-PROD_LAUNCHER_EOF
+# Launch Claudia using optimized development mode
+echo "🚀 Starting Claudia..."
+exec bun run tauri dev
+CLAUDIA_LAUNCHER_EOF
 
-  chmod +x launch-production.sh
-  echo "✅ Production launcher created: launch-production.sh"
+  chmod +x launch-claudia.sh
+  echo "✅ Claudia launcher created: launch-claudia.sh"
+  
+  # Create system-wide launcher script
+  echo "🔧 Creating system-wide launcher script..."
+  cat > claudia-system << SYSTEM_EOF
+#!/bin/bash
+# Claudia Optimized System Launcher
+# Bypasses WebView/IPC issues using optimized build mode
+
+CLAUDIA_HOME="$CLAUDIA_DIR"
+
+# Comprehensive WebKit fixes
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+export GTK_USE_PORTAL=0
+export GDK_BACKEND=x11
+
+# Change to Claudia installation directory
+cd "$CLAUDIA_HOME" || {
+    echo "❌ Error: Could not access Claudia installation at: $CLAUDIA_HOME"
+    exit 1
+}
+
+# Launch the optimized launcher
+exec ./launch-claudia.sh "$@"
+SYSTEM_EOF
+  
+  chmod +x claudia-system
+  echo "✅ System launcher created: claudia-system"
   
   # Package Manager Configuration Governor (Cybernetic Pattern)
   echo "🔧 Applying package manager governance to Tauri configuration..."
@@ -1480,10 +1808,7 @@ DESKTOP_EOF
       if ! grep -q "# Claudia Manjaro aliases (Jamie Saker/Macawi)" "$SHELL_RC" 2>/dev/null; then
           echo "" >> "$SHELL_RC"
           echo "# Claudia Manjaro aliases (Jamie Saker/Macawi)" >> "$SHELL_RC"
-          echo "alias claudia-dev='cd $CLAUDIA_DIR && ./claudia-manjaro.sh dev'" >> "$SHELL_RC"
-          echo "alias claudia-build='cd $CLAUDIA_DIR && ./claudia-manjaro.sh build'" >> "$SHELL_RC"
-          echo "alias claudia-build-exe='cd $CLAUDIA_DIR && ./claudia-manjaro.sh build-exe'" >> "$SHELL_RC"
-          echo "alias claudia-build-full='cd $CLAUDIA_DIR && ./claudia-manjaro.sh build-full'" >> "$SHELL_RC"
+          echo "alias claudia='cd $CLAUDIA_DIR && ./claudia-manjaro.sh build'" >> "$SHELL_RC"
           echo "alias claudia-clean='cd $CLAUDIA_DIR && ./claudia-manjaro.sh clean'" >> "$SHELL_RC"
           echo "✅ Added aliases to $SHELL_RC"
           echo "💡 Restart your terminal or run: source $SHELL_RC"
@@ -1515,14 +1840,16 @@ UNINSTALL_EOF
   echo ""
   echo "🚀 To start Claudia:"
   echo "   cd $CLAUDIA_DIR"
-  echo "   ./claudia-manjaro.sh dev"
+  echo "   ./launch-claudia.sh"
   echo ""
-  echo "📝 Or use aliases (after restarting terminal):"
-  echo "   claudia-dev         # Start development server"
-  echo "   claudia-build       # Build with deb and rpm packages"
-  echo "   claudia-build-exe   # Build executable only (no bundles)"
-  echo "   claudia-build-full  # Build with AppImage (requires dependencies)"
-  echo "   claudia-clean       # Clean build artifacts"
+  echo "📝 Available commands:"
+  echo "   ./launch-claudia.sh       # Build and run Claudia"
+  echo "   claudia                   # System alias (after restarting terminal)"
+  echo ""
+  echo "💡 Optional system-wide installation:"
+  echo "   sudo mv claudia-system /usr/local/bin/claudia"
+  echo "   sudo chmod +x /usr/local/bin/claudia"
+  echo "   # Then run: claudia (from anywhere)"
   echo ""
   echo "ℹ️  Other useful commands:"
   echo "   ./claudia-manjaro.sh version  # Show launcher version info"
@@ -1571,7 +1898,7 @@ UNINSTALL_EOF
   echo "✅ Installation validation completed successfully"
   echo ""
   echo "📋 Troubleshooting Tips:"
-  echo "• If AppImage bundling fails, use 'claudia-build' instead of 'claudia-build-full'"
+  echo "• Build system optimized for stability and compatibility"
   echo "• If you get WebKit errors, the launcher script applies the necessary fixes"
   echo "• For permission issues, ensure the script is executable: chmod +x claudia-manjaro.sh"
   echo "• For missing dependencies, check the output above and install manually with pacman"

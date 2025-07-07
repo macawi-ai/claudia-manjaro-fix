@@ -9,6 +9,8 @@ This project demonstrates **cybernetic governors** applied to complex system int
 - **Community enablement** for broader Claude Code ecosystem access
 - **Proof-of-concept** for Third Wave cybernetic ecology principles
 - **Antifragile design** that handles diverse Linux distribution variations
+- **WebView/IPC issue resolution** through optimized build strategy
+- **Simplified user experience** with streamlined build commands
 
 ### Development Approach
 - **Probe-sense-respond**: Test system configurations and adapt
@@ -25,8 +27,9 @@ This project demonstrates **cybernetic governors** applied to complex system int
 ### Technical Governors
 - **Environment detection**: Automatically adapt to system variations
 - **Package installation**: Graceful fallbacks for failed dependencies
-- **WebKit compatibility**: Apply appropriate fixes based on detection
-- **Build process**: Handle AppImage/FUSE issues with extract-and-run
+- **WebKit compatibility**: Apply comprehensive environment variable fixes
+- **Build process**: Optimized development mode bypassing WebView/IPC issues
+- **Command simplification**: Streamlined `claudia` and `claudia-clean` interface
 
 ### Quality Assurance
 - **Script validation**: Syntax checking and structure validation

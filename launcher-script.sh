@@ -63,6 +63,10 @@
   export WEBKIT_DISABLE_DMABUF_RENDERER=1
   export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
   
+  # WebKit IPC and sandbox fixes for production builds
+  export GTK_USE_PORTAL=0
+  export GDK_BACKEND=x11
+  
   # AppImage bundling fixes for Manjaro - CRITICAL for Tauri's cached linuxdeploy
   export APPIMAGE_EXTRACT_AND_RUN=1
   
