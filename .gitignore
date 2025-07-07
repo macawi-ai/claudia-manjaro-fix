@@ -46,3 +46,20 @@
   .env.test.local
   .env.production.local
 
+
+# Large binaries and build outputs
+src-tauri/target/
+src-tauri/binaries/
+*.AppImage
+*.deb
+*.rpm
+*.exe
+*.dmg
+*.app
+bun.lock
+
+# Cache directories
+.cache/
+.bun/
+node_modules/.vite/
+EOF < /dev/null
